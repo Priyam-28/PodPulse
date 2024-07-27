@@ -1,4 +1,5 @@
 'use client'
+import GeneratePodcast from '@/components/GeneratePodcast';
 import { Button } from '@/components/ui/button';
 import { Form, FormControl, FormField, FormItem, FormLabel, FormMessage } from '@/components/ui/form'
 import { Input } from '@/components/ui/input';
@@ -112,8 +113,7 @@ const CreatePodcast = () => {
             />
           </div>
           <div className="flex flex-col pt-10">
-              {/* /Generate Podcast
-              //Generate Thumbnail */}
+              <GeneratePodcast/>
 
               <div className="mt-10 w-full">
                 <Button type="submit" className="text-16 w-full bg-orange-1 py-4 font-extrabold text-white-1 transition-all duration-500 hover:bg-black-1">
