@@ -7,7 +7,7 @@ import { SpeechCreateParams } from "openai/resources/audio/speech.mjs";
 const openai= new OpenAI ({
     apiKey:process.env.OPEN_API_KEY,
 })
-export const doSomething = action({
+export const generateAudioAction = action({
   args: { input:v.string(),voice:v.string() },
   handler: (_, {voice,input}) => async () => {
     // do something with `args.a` and `args.b`

@@ -1,10 +1,85 @@
-import React from 'react'
+'use client'
+import React, { useState } from 'react'
 import { Label } from './ui/label'
 import { Textarea } from './ui/textarea'
 import { Button } from './ui/button'
 import { Loader } from 'lucide-react'
+import { GeneratePodcastProps } from '@/types'
+import { useToast } from './ui/use-toast'
+import { useAction, useMutation } from 'convex/react'
+import { api } from '@/convex/_generated/api'
+import { useUploadFiles } from '@xixixao/uploadstuff/react';
+import { v4 as uuidv4 } from 'uuid';
 
-const GeneratePodcast = () => {
+
+
+const useGeneratePodcast=({setAudio,voiceType, voicePrompt, setAudioStorageId
+}: GeneratePodcastProps)=>{
+  const[isGenerating,setIsGenerating]=useState(false);
+
+  const {toast}=useToast();
+
+  const generateUploadUrl=useMutation(api.files.generateUploadUrl);
+  // used by convex along with upload stuff for uploading files in convex
+
+  const {startUpload} =useUploadFiles(generateUploadUrl)
+  const getPodcastAudio=useAction(api.openai.generateAudioAction);
+  // using the openai function in here
+
+
+  const generatePodcast=async()=>{
+    setIsGenerating(true);
+    setAudio('');
+
+    if(!voicePrompt){
+      toast({
+        title:"Please select a voice"
+      })
+
+      return setIsGenerating(false);
+    }
+
+    try{
+      const response = await getPodcastAudio({
+        voice: voiceType,
+        input: voicePrompt
+      })
+
+      const blob = new Blob([response], { type: 'audio/mpeg' });
+      const filename=`podcast-${uuidv4()}.mp3`;
+      const file = new File([blob], filename, { type: 'audio/mpeg' });
+
+      const uploaded = await startUpload([file]);
+      const storageId = (uploaded[0].response as any).storageId;
+
+      setAudioStorageId(storageId);
+
+      const audioUrl = await getAudioUrl({ storageId });
+      setAudio(audioUrl!);
+      setIsGenerating(false);
+      toast({
+        title: "Podcast generated successfully",
+      })
+
+
+
+    }
+    catch (error){
+      console.log("Error generating podcasts",error);
+      toast({
+        title: "Error creating a podcast",
+        variant: 'destructive',
+      })
+      setIsGenerating(false);
+    }
+  
+  }
+  return {isGenerating,generatePodcast}
+}
+
+
+const GeneratePodcast = (props: GeneratePodcastProps) => {
+  const { isGenerating, generatePodcast } = useGeneratePodcast(props);
   return (
     <div>
       <div className='flex flex-cl gap-2.5'>
@@ -33,7 +108,7 @@ const GeneratePodcast = () => {
          autoPlay
          className='mt-5'
          onLoadedMetadata={(e)=> props.setAudioDuration(e.currentTarget.duration)}/>
-        //  event handler that is triggered when the metadata of a media element (like audio or video) has been loaded
+        //  event handler that is triggered when the metadata of a media element (like audio or video) has been loaded  
       )}
 
     </div>
