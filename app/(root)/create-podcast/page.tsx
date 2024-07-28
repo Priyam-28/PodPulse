@@ -1,40 +1,48 @@
-'use client'
-import GeneratePodcast from '@/components/GeneratePodcast';
-import { Button } from '@/components/ui/button';
-import { Form, FormControl, FormField, FormItem, FormLabel, FormMessage } from '@/components/ui/form'
-import { Input } from '@/components/ui/input';
-import { Label } from '@/components/ui/label';
-import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select';
-import { Textarea } from '@/components/ui/textarea';
-import { useToast } from '@/components/ui/use-toast';
-import { Id } from '@/convex/_generated/dataModel';
-import { cn } from '@/lib/utils';
-import { zodResolver } from '@hookform/resolvers/zod';
-import {  } from '@radix-ui/react-select';
-import { useMutation } from 'convex/react';
-import { Loader } from 'lucide-react';
-import { useRouter } from 'next/navigation';
-import React, { useState } from 'react'
-import { useForm } from 'react-hook-form';
-import { z } from 'zod';
+
+"use client"
+
+import { zodResolver } from "@hookform/resolvers/zod"
+import { useForm } from "react-hook-form"
+import { z } from "zod"
+
+import { Button } from "@/components/ui/button"
+import {
+  Form,
+  FormControl,
+  FormDescription,
+  FormField,
+  FormItem,
+  FormLabel,
+  FormMessage,
+} from "@/components/ui/form"
+import { Input } from "@/components/ui/input"
+import { Label } from "@/components/ui/label"
+import {
+  Select,
+  SelectContent,
+  SelectItem,
+  SelectTrigger,
+  SelectValue,
+} from "@/components/ui/select"
+import { cn } from "@/lib/utils"
+import { useState } from "react"
+import { Textarea } from "@/components/ui/textarea"
+import GeneratePodcast from "@/components/GeneratePodcast"
+import { Loader } from "lucide-react"
+import { Id } from "@/convex/_generated/dataModel"
+import { useToast } from "@/components/ui/use-toast"
+import { useMutation } from "convex/react"
+import { api } from "@/convex/_generated/api"
+import { useRouter } from "next/navigation"
 
 const voiceCategories = ['alloy', 'shimmer', 'nova', 'echo', 'fable', 'onyx'];
 
-// here we are using zod validation to validate the form data
 const formSchema = z.object({
   podcastTitle: z.string().min(2),
   podcastDescription: z.string().min(2),
 })
 
 const CreatePodcast = () => {
-  const form = useForm<z.infer<typeof formSchema>>({
-    resolver: zodResolver(formSchema), // enables react-hook-form to validate the form data according to the Zod schema.    
-    defaultValues: {
-      podcastTitle: "",
-      podcastDescription: "",
-    },
-  });
-
   const router = useRouter()
   const [imagePrompt, setImagePrompt] = useState('');
   const [imageStorageId, setImageStorageId] = useState<Id<"_storage"> | null>(null)
@@ -49,20 +57,67 @@ const CreatePodcast = () => {
   
   const [isSubmitting, setIsSubmitting] = useState(false);
 
-  // const createPodcast = useMutation(api.podcasts.createPodcast)
+  const createPodcast = useMutation(api.podcasts.createPodcast)
 
   const { toast } = useToast()
+  // 1. Define your form.
+  const form = useForm<z.infer<typeof formSchema>>({
+    resolver: zodResolver(formSchema),
+    defaultValues: {
+      podcastTitle: "",
+      podcastDescription: "",
+    },
+  })
+ 
+  async function onSubmit(data: z.infer<typeof formSchema>) {
+    try {
+      setIsSubmitting(true);
+      if(!audioUrl || !imageUrl || !voiceType) {
+        toast({
+          title: 'Please generate audio and image',
+        })
+        setIsSubmitting(false);
+        throw new Error('Please generate audio and image')
+      }
+
+      const podcast = await createPodcast({
+        podcastTitle: data.podcastTitle,
+        podcastDescription: data.podcastDescription,
+        audioUrl,
+        imageUrl,
+        voiceType,
+        imagePrompt,
+        voicePrompt,
+        views: 0,
+        audioDuration,
+        audioStorageId: audioStorageId!,
+        imageStorageId: imageStorageId!,
+      })
+      toast({ title: 'Podcast created' })
+      setIsSubmitting(false);
+      router.push('/')
+    } catch (error) {
+      console.log(error);
+      toast({
+        title: 'Error',
+        variant: 'destructive',
+      })
+      setIsSubmitting(false);
+    }
+  }
+
   return (
     <section className="mt-10 flex flex-col">
-      <h1 className="text-20 font-bold text-white-1">Create New Podcast</h1>
+      <h1 className="text-20 font-bold text-white-1">Create Podcast</h1>
+
       <Form {...form}>
-        <form className='mt-12 flex w-full flex-col'>
+        <form onSubmit={form.handleSubmit(onSubmit)} className="mt-12 flex w-full flex-col">
           <div className="flex flex-col gap-[30px] border-b border-black-5 pb-10">
             <FormField
               control={form.control}
               name="podcastTitle"
               render={({ field }) => (
-                <FormItem className='flex flex-col gap-2.5'>
+                <FormItem className="flex flex-col gap-2.5">
                   <FormLabel className="text-16 font-bold text-white-1">Title</FormLabel>
                   <FormControl>
                     <Input className="input-class focus-visible:ring-offset-orange-1" placeholder="JSM Pro Podcast" {...field} />
@@ -72,7 +127,7 @@ const CreatePodcast = () => {
               )}
             />
 
-            <div className="flex flex-col gap2.5">
+            <div className="flex flex-col gap-2.5">
               <Label className="text-16 font-bold text-white-1">
                 Select AI Voice
               </Label>
@@ -81,7 +136,6 @@ const CreatePodcast = () => {
                 <SelectTrigger className={cn('text-16 w-full border-none bg-black-1 text-gray-1 focus-visible:ring-offset-orange-1')}>
                   <SelectValue placeholder="Select AI Voice" className="placeholder:text-gray-1 " />
                 </SelectTrigger>
-                {/* select content >> select item item */}
                 <SelectContent className="text-16 border-none bg-black-1 font-bold text-white-1 focus:ring-orange-1">
                   {voiceCategories.map((category) => (
                     <SelectItem key={category} value={category} className="capitalize focus:bg-orange-1">
@@ -89,15 +143,16 @@ const CreatePodcast = () => {
                     </SelectItem>
                   ))}
                 </SelectContent>
-                {
-                  voiceType && (
-                    <audio src={`/${voiceType}.mp3`}
+                {voiceType && (
+                  <audio 
+                    src={`/${voiceType}.mp3`}
                     autoPlay
-                    className='hidden' />
-                  )
-                }
+                    className="hidden"
+                  />
+                )}
               </Select>
             </div>
+
             <FormField
               control={form.control}
               name="podcastDescription"
@@ -113,7 +168,23 @@ const CreatePodcast = () => {
             />
           </div>
           <div className="flex flex-col pt-10">
-              <GeneratePodcast/>
+              <GeneratePodcast 
+                setAudioStorageId={setAudioStorageId}
+                setAudio={setAudioUrl}
+                voiceType={voiceType!}
+                audio={audioUrl}
+                voicePrompt={voicePrompt}
+                setVoicePrompt={setVoicePrompt}
+                setAudioDuration={setAudioDuration}
+              />
+
+              {/* <GenerateThumbnail 
+               setImage={setImageUrl}
+               setImageStorageId={setImageStorageId}
+               image={imageUrl}
+               imagePrompt={imagePrompt}
+               setImagePrompt={setImagePrompt}
+              /> */}
 
               <div className="mt-10 w-full">
                 <Button type="submit" className="text-16 w-full bg-orange-1 py-4 font-extrabold text-white-1 transition-all duration-500 hover:bg-black-1">
@@ -127,7 +198,7 @@ const CreatePodcast = () => {
                   )}
                 </Button>
               </div>
-            </div>
+          </div>
         </form>
       </Form>
     </section>

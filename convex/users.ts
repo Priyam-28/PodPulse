@@ -119,3 +119,6 @@ export const deleteUser = internalMutation({
     await ctx.db.delete(user._id);
   },
 });
+
+
+// defining all the acions for creating deleting and updating the user

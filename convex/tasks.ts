@@ -6,3 +6,6 @@ export const get = query({
     return await ctx.db.query("tasks").collect();
   },
 });
+
+
+// Just for demo
